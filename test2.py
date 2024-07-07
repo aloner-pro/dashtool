@@ -13,7 +13,14 @@ def get_db_connection():
 @app.post("/uploadcsv/")
 async def upload_csv(csv_file: UploadFile = File(...)):
     df = pd.read_csv(csv_file.file)
-    df = df.drop(columns=['Unnamed: 0'])
+    df.drop(columns=['Unnamed: 0'], inplace=True)
+    rename_dict = {'Release date': 'Release_date',
+                   'Required age': 'Required_age',
+                   'DLC count': 'DLC_count',
+                   'About the game': 'About_the_game',
+                   'Supported languages' : 'Supported_languages',
+                   'Score rank': 'Score_rank'}
+    df.rename(columns=rename_dict, inplace=True)
     connection = get_db_connection()
     cursor = connection.cursor()
     df.to_sql('gameData', connection, if_exists='replace')
@@ -60,22 +67,22 @@ def search_games(
         query += " AND Name LIKE ? "
         params.append(f"%{Name}%")
     if Release_date is not None:
-        query += " AND `Release date` LIKE ? "
+        query += " AND Release_date LIKE ? "
         params.append(f"%{Release_date}%")
     if Required_age is not None:
-        query += " AND `Required age` = ?"
+        query += " AND Required_age = ?"
         params.append(Required_age)
     if Price is not None:
         query += " AND Price = ?"
         params.append(Price)
     if DLC_count is not None:
-        query += " AND `DLC count` = ?"
+        query += " AND DLC_count = ?"
         params.append(DLC_count)
     if About_the_game is not None:
-        query += " AND `About the game` LIKE ?"
+        query += " AND About_the_game LIKE ?"
         params.append(f"%{About_the_game}%")
     if Supported_languages is not None:
-        query += " AND `Supported languages` LIKE ?"
+        query += " AND Supported_languages LIKE ?"
         params.append(f"%{Supported_languages}%")
     if Windows is not None:
         query += " AND Windows = ?"
@@ -93,7 +100,7 @@ def search_games(
         query += " AND Negative = ?"
         params.append(Negative)
     if Score_rank is not None:
-        query += " AND 'Score rank' = ?"
+        query += " AND Score_rank = ?"
         params.append(Score_rank)
     if Developers is not None:
         query += " AND Developers LIKE ?"

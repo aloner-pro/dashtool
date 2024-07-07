@@ -5,7 +5,6 @@ import sqlite3
 app = FastAPI()
 connection = sqlite3.connect('data.db')
 cursor = connection.cursor()
-query = f"SELECT COUNT(*) FROM gameData"
 
 
 @app.get('/')
@@ -16,9 +15,9 @@ async def root():
 @app.post("/uploadcsv/")
 async def upload_csv(csv_file: UploadFile = File(...)):
     df = pd.read_csv(csv_file.file)
-    print(df.head())
     df = df.drop(columns=['Unnamed: 0'])
     df.to_sql('gameData', connection, if_exists='replace')
+    query = f"SELECT COUNT(*) FROM gameData"
     cursor.execute(query)
     result = cursor.fetchone()
     if df.shape[0] == result[0]:

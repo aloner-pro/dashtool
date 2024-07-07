@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from typing import Optional, List
 import sqlite3
 
@@ -39,11 +39,14 @@ def search_games(
     params = []
 
     if AppID is not None:
-        query += f" AND AppID = {AppID}"
+        query += " AND AppID = ?"
+        params.append(AppID)
     if Name is not None:
-        query += f''' AND Name LIKE '%{Name}%' '''
+        query += " AND Name LIKE ? "
+        params.append(f"%{Name}%")
     if Release_date is not None:
-        query += f''' AND `Release date` LIKE '%{Release_date}%' '''
+        query += " AND `Release date` LIKE ? "
+        params.append(f"%{Release_date}%")
     if Required_age is not None:
         query += " AND `Required age` = ?"
         params.append(Required_age)
@@ -97,8 +100,8 @@ def search_games(
     results = cursor.fetchall()
 
     conn.close()
-
-    return results
+    count = len(results)
+    return {"count": count, "results": results}
 
 
 if __name__ == "__main__":

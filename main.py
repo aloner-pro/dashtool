@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query, File, UploadFile, HTTPException
 from typing import Optional, List
 import sqlite3
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import ast
 
 app = FastAPI()
@@ -11,10 +11,10 @@ def get_db_connection():
     conn = sqlite3.connect('data.db')
     return conn
 
-class upload(BaseModel):
+class UploadResponse(BaseModel):
     detail: str
 
-@app.post("/uploadcsv/", response_model=upload)
+@app.post("/uploadcsv/", response_model=UploadResponse)
 async def upload_csv(csv_file: UploadFile = File(...)):
     df = pd.read_csv(csv_file.file)
     if 'Unnamed: 0' in df.columns:
@@ -43,12 +43,7 @@ async def upload_csv(csv_file: UploadFile = File(...)):
     list_columns = ['Supported_languages', 'Categories', 'Genres', 'Tags']
     for col in list_columns:
         if col in df.columns:
-            df[col] = df[col].apply(lambda x: ','.join(x) if isinstance(x,list) else x)
-
-    # Convert boolean columns to integers
-    df['Windows'] = df['Windows'].astype(int)
-    df['Mac'] = df['Mac'].astype(int)
-    df['Linux'] = df['Linux'].astype(int)
+            df[col] = df[col].apply(lambda x: ','.join(x) if isinstance(x, list) else x)
 
     conn = get_db_connection()
     df.to_sql('gameData', conn, if_exists='replace', index=False)
@@ -65,9 +60,9 @@ class GameData(BaseModel):
     DLC_count: int
     About_the_game: str
     Supported_languages: List[str]
-    Windows: int
-    Mac: int
-    Linux: int
+    Windows: int = Field(ge=0,le=1)
+    Mac: int = Field(ge=0,le=1)
+    Linux: int = Field(ge=0,le=1)
     Positive: int
     Negative: int
     Score_rank: Optional[int]

@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, File, UploadFile
 from typing import Optional, List
 import sqlite3
+import pandas as pd
 
 app = FastAPI()
 
@@ -9,6 +10,20 @@ def get_db_connection():
     conn = sqlite3.connect('data.db')
     return conn
 
+@app.post("/uploadcsv/")
+async def upload_csv(csv_file: UploadFile = File(...)):
+    df = pd.read_csv(csv_file.file)
+    df = df.drop(columns=['Unnamed: 0'])
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    df.to_sql('gameData', connection, if_exists='replace')
+    query = f"SELECT COUNT(*) FROM gameData"
+    cursor.execute(query)
+    result = cursor.fetchone()
+    if df.shape[0] == result[0]:
+        return {"Success"}
+    else:
+        return {"Failed"}
 
 @app.get("/search")
 def search_games(
@@ -106,5 +121,4 @@ def search_games(
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="127.0.0.1", port=8000)

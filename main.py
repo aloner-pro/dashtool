@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Query, File, UploadFile, HTTPException
+from fastapi import FastAPI, Query, File, UploadFile, HTTPException, Depends
 from typing import Optional, List
 import sqlite3
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import ast
 
 app = FastAPI()
@@ -39,12 +39,6 @@ async def upload_csv(csv_file: UploadFile = File(...)):
         missing_cols = [col for col in expected_columns if col not in df.columns]
         raise HTTPException(status_code=400, detail=f"Missing columns in CSV: {missing_cols}")
 
-    # Convert list columns to comma-separated strings
-    list_columns = ['Supported_languages', 'Categories', 'Genres', 'Tags']
-    for col in list_columns:
-        if col in df.columns:
-            df[col] = df[col].apply(lambda x: ','.join(x) if isinstance(x, list) else x)
-
     conn = get_db_connection()
     df.to_sql('gameData', conn, if_exists='replace', index=False)
     conn.close()
@@ -60,9 +54,9 @@ class GameData(BaseModel):
     DLC_count: int
     About_the_game: str
     Supported_languages: List[str]
-    Windows: int = Field(ge=0,le=1)
-    Mac: int = Field(ge=0,le=1)
-    Linux: int = Field(ge=0,le=1)
+    Windows: int
+    Mac: int
+    Linux: int
     Positive: int
     Negative: int
     Score_rank: Optional[int]
@@ -76,8 +70,14 @@ class SearchResponse(BaseModel):
     count: int
     results: List[GameData]
 
+# Dependency function to validate GameData
+def validate_game_data(game_data: GameData):
+    if not (game_data.Windows in [0, 1] and game_data.Mac in [0, 1] and game_data.Linux in [0, 1]):
+        raise HTTPException(status_code=400, detail="Invalid OS support values")
+    return game_data
+
 @app.get("/search", response_model=SearchResponse)
-def search_games(
+async def search_games(
         AppID: Optional[int] = Query(None),
         Name: Optional[str] = Query(None),
         Release_date: Optional[str] = Query(None),
@@ -96,86 +96,87 @@ def search_games(
         Publishers: Optional[str] = Query(None),
         Categories: Optional[str] = Query(None),
         Genres: Optional[str] = Query(None),
-        Tags: Optional[str] = Query(None)
+        Tags: Optional[str] = Query(None),
+        conn: sqlite3.Connection = Depends(get_db_connection)
 ):
 
     conn = get_db_connection()
     cursor = conn.cursor()
     query = "SELECT * FROM gameData WHERE 1=1"
     params = []
-    if AppID is not None:
+    if AppID:
         query += " AND AppID = ?"
         params.append(AppID)
 
-    if Name is not None:
+    if Name:
         query += " AND Name LIKE ?"
         params.append(f"%{Name}%")
 
-    if Release_date is not None:
+    if Release_date:
         query += " AND Release_date LIKE ?"
         params.append(f"%{Release_date}%")
 
-    if Required_age is not None:
+    if Required_age:
         query += " AND Required_age = ?"
         params.append(Required_age)
 
-    if Price is not None:
+    if Price:
         query += " AND Price = ?"
         params.append(Price)
 
-    if DLC_count is not None:
+    if DLC_count:
         query += " AND DLC_count = ?"
         params.append(DLC_count)
 
-    if About_the_game is not None:
+    if About_the_game:
         query += " AND About_the_game LIKE ?"
         params.append(f"%{About_the_game}%")
 
-    if Supported_languages is not None:
+    if Supported_languages:
         query += " AND Supported_languages LIKE ?"
         params.append(f"%{Supported_languages}%")
 
-    if Windows is not None:
+    if Windows:
         query += " AND Windows = ?"
         params.append(Windows)
 
-    if Mac is not None:
+    if Mac:
         query += " AND Mac = ?"
         params.append(Mac)
 
-    if Linux is not None:
+    if Linux:
         query += " AND Linux = ?"
         params.append(Linux)
 
-    if Positive is not None:
+    if Positive:
         query += " AND Positive = ?"
         params.append(Positive)
 
-    if Negative is not None:
+    if Negative:
         query += " AND Negative = ?"
         params.append(Negative)
 
-    if Score_rank is not None:
+    if Score_rank:
         query += " AND Score_rank = ?"
         params.append(Score_rank)
 
-    if Developers is not None:
+    if Developers:
         query += " AND Developers LIKE ?"
         params.append(f"%{Developers}%")
 
-    if Publishers is not None:
+    if Publishers:
         query += " AND Publishers LIKE ?"
         params.append(f"%{Publishers}%")
 
-    if Categories is not None:
+    if Categories:
         query += " AND Categories LIKE ?"
         params.append(f"%{Categories}%")
 
-    if Genres is not None:
+    if Genres:
         query += " AND Genres LIKE ?"
         params.append(f"%{Genres}%")
 
-    if Tags is not None:
+    if Tags:
         query += " AND Tags LIKE ?"
         params.append(f"%{Tags}%")
 

@@ -2,6 +2,7 @@
 API to upload csv file **(following game_data schema)** and query it based on filters.
 
 ## /uploadcsv
+See Example_game_data.csv for the expected schema of the csv.
 On successful upload we get
 ```
 {
@@ -54,6 +55,7 @@ The image size if of 459 MB
 
 ## Deployed FastAPI on Render
 Deployed on Render through Docker image from Dockerhub with public repo devsohel/dashtool
+[Visit link](https://dashtool.onrender.com/docs)
 
 ## Features to add
 TODO

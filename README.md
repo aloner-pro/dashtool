@@ -64,3 +64,4 @@ TODO
 - mean/min/max query support for numeric columns
 - CI/CD
 - Writing unit tests
+- Optimization

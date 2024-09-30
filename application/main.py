@@ -79,12 +79,9 @@ async def search_games(
 ):
 
     token_result = VerifyToken(token.credentials).verify()
-    if token_result.get("status") == "error":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=token_result.get("msg", "Invalid token"),
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if token_result.get('status') == 'error':
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return ErrorResponse(detail=token_result.get('msg'))
 
     conn = get_db_connection()
     cursor = conn.cursor()

@@ -1,18 +1,18 @@
-from fastapi import FastAPI, Query, File, UploadFile, HTTPException, Depends
-from typing import Optional, List
+from fastapi import FastAPI, Query, File, UploadFile, HTTPException, Depends, Response, status
+from fastapi.security import HTTPBearer
+from typing import Optional, Union
+from .utils import VerifyToken
+from .model import SearchResponse, ErrorResponse, GameData, UploadResponse
 import sqlite3
 import pandas as pd
-from pydantic import BaseModel
 import ast
 
 app = FastAPI()
+token_auth_scheme = HTTPBearer()
 
 def get_db_connection():
     conn = sqlite3.connect('data.db')
     return conn
-
-class UploadResponse(BaseModel):
-    detail: str
 
 @app.post("/uploadcsv/", response_model=UploadResponse)
 async def upload_csv(csv_file: UploadFile = File(...)):
@@ -45,30 +45,6 @@ async def upload_csv(csv_file: UploadFile = File(...)):
 
     return {"detail": "File uploaded successfully"}
 
-class GameData(BaseModel):
-    AppID: int
-    Name: str
-    Release_date: str
-    Required_age: int
-    Price: float
-    DLC_count: int
-    About_the_game: str
-    Supported_languages: List[str]
-    Windows: int
-    Mac: int
-    Linux: int
-    Positive: int
-    Negative: int
-    Score_rank: Optional[int]
-    Developers: str
-    Publishers: str
-    Categories: List[str]
-    Genres: List[str]
-    Tags: List[str]
-
-class SearchResponse(BaseModel):
-    count: int
-    results: List[GameData]
 
 # Dependency function to validate GameData
 def validate_game_data(game_data: GameData):
@@ -76,8 +52,10 @@ def validate_game_data(game_data: GameData):
         raise HTTPException(status_code=400, detail="Invalid OS support values")
     return game_data
 
-@app.get("/search", response_model=SearchResponse)
+@app.get("/search", response_model=Union[SearchResponse, ErrorResponse])
 async def search_games(
+        response: Response,
+        token: str = Depends(token_auth_scheme),
         AppID: Optional[int] = Query(None),
         Name: Optional[str] = Query(None),
         Release_date: Optional[str] = Query(None),
@@ -99,6 +77,14 @@ async def search_games(
         Tags: Optional[str] = Query(None),
         conn: sqlite3.Connection = Depends(get_db_connection)
 ):
+
+    token_result = VerifyToken(token.credentials).verify()
+    if token_result.get("status") == "error":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=token_result.get("msg", "Invalid token"),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     conn = get_db_connection()
     cursor = conn.cursor()

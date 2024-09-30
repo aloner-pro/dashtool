@@ -57,11 +57,19 @@ The image size if of 459 MB
 Deployed on Render through Docker image from Dockerhub with public repo devsohel/dashtool\
 [Deployed link](https://dashtool.onrender.com/docs)
 
+
 ## Features to add
 TODO
-- authentication
 - aggregate search
 - mean/min/max query support for numeric columns
 - CI/CD
 - Writing unit tests
 - Optimization
+
+## Features implemented
+- authentication **DONE**
+  - JWT token-based authentication implemented
+  - Used Auth0 for authentication
+- Upload csv **DONE**
+- Search **DONE**
+- Filtering **DONE**

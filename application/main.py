@@ -14,8 +14,15 @@ def get_db_connection():
     conn = sqlite3.connect('data.db')
     return conn
 
-@app.post("/uploadcsv/", response_model=UploadResponse)
-async def upload_csv(csv_file: UploadFile = File(...)):
+@app.post("/uploadcsv/", response_model=Union[UploadResponse, ErrorResponse])
+async def upload_csv(response: Response, token: str = Depends(token_auth_scheme),
+                     csv_file: UploadFile = File(...)):
+
+    token_result = VerifyToken(token.credentials).verify()
+    if token_result.get('status') == 'error':
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return ErrorResponse(detail=token_result.get('msg'))
+
     df = pd.read_csv(csv_file.file)
     if 'Unnamed: 0' in df.columns:
         df.drop(columns=['Unnamed: 0'], inplace=True)
